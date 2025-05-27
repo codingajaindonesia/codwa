@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Client List</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+</head>
+<body>
+  <div class="container mt-5">
+   
+
+    <h2>Daftar Client WhatsApp</h2>
+    <hr>
+    <table id="clientTable" class="table table-striped">
+      <thead>
+        <tr>
+          <th>Client ID</th>
+          <th>Status</th>
+          <th>Nomor</th>
+          <th>Nama</th>
+          <th>Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% clients.forEach(c => { %>
+          <tr>
+            <td><%= c.client_id %></td>
+            <td>
+              <% if (c.is_ready) { %>
+                <span class="badge bg-success">Connected</span>
+              <% } else { %>
+                <span class="badge bg-warning text-dark">Not Connected</span>
+              <% } %>
+            </td>
+            <td><%= c.phone_number || '-' %></td>
+            <td><%= c.device_name || '-' %></td>
+            <td>
+              <% if (!c.is_ready) { %>
+                <button class="btn btn-primary btn-sm" onclick="scanQR('<%= c.client_id %>')">Scan QR</button>
+              <% } %>
+              <% if (c.is_ready) { %>
+                <button class="btn btn-warning btn-sm" onclick="logoutClient('<%= c.client_id %>')">Logout</button>
+              <% } %>
+              <button class="btn btn-danger btn-sm" onclick="deleteClient('<%= c.client_id %>')">Delete</button>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+    <hr>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addClientModal">+ Tambah Client</button>
+    
+    <a href="/logout" class="btn btn-danger">Logout Admin</a>
+
+  </div>
+<!-- Modal QR -->
+<div class="modal fade" id="qrModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content text-center p-3">
+      <h5>Scan QR Code</h5>
+      <img id="qrImage" src="" alt="QR Code" class="img-fluid" style="max-width: 300px;" />
+    </div>
+  </div>
+</div>
+<!-- Modal Tambah Client -->
+<div class="modal fade" id="addClientModal" tabindex="-1" aria-labelledby="addClientModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <form id="addClientForm" class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addClientModalLabel">Tambah Client Baru</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label for="clientIdInput" class="form-label">Client ID</label>
+          <input type="text" class="form-control" id="clientIdInput" name="clientId" required placeholder="Contoh: toko-1, admin-bali, dsb">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="submit" class="btn btn-primary">Tambah</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+  <!-- Script -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
+
+  <script>
+    $(document).ready(function () {
+      $('#clientTable').DataTable();
+    });
+
+    // function scanQR(clientId) {
+    //   $('#qrBox').html('Memuat QR...');
+    //   $('#qrModal').modal('show');
+
+    //   fetch(`/qr/${clientId}`)
+    //     .then(res => res.text())
+    //     .then(qr => {
+    //       document.getElementById('qrBox').innerHTML = `<img src="${qr}" width="250" />`;
+    //     })
+    //     .catch(err => {
+    //       $('#qrBox').html('Gagal memuat QR');
+    //     });
+    // }
+   function scanQR(clientId) {
+  // Tampilkan loading spinner SweetAlert
+  Swal.fire({
+    title: 'Menunggu QR Code...',
+    text: 'Silakan tunggu beberapa detik',
+    allowOutsideClick: false,
+    didOpen: () => {
+      Swal.showLoading();
+    }
+  });
+
+  const evtSource = new EventSource(`/qr/${clientId}`);
+
+  evtSource.onmessage = function (event) {
+    const qrData = event.data;
+
+    // Tutup loading SweetAlert saat QR diterima
+    Swal.close();
+
+    // Set QR ke dalam modal & tampilkan modal
+    document.getElementById('qrImage').src = qrData;
+    const qrModal = new bootstrap.Modal(document.getElementById('qrModal'));
+    qrModal.show();
+
+    evtSource.close(); // QR sudah diterima, tidak perlu lanjut
+  };
+
+  evtSource.onerror = function () {
+    evtSource.close();
+    Swal.fire({
+      icon: 'error',
+      title: 'Gagal Mendapatkan QR',
+      text: 'Silakan coba lagi.',
+    });
+  };
+}
+
+    function logoutClient(clientId) {
+      if (confirm('Yakin logout client ini?')) {
+        fetch(`/api/logout/${clientId}`, { method: 'DELETE' })
+          .then(() => location.reload());
+      }
+    }
+
+    function deleteClient(clientId) {
+      if (confirm('Hapus client dan datanya?')) {
+        fetch(`/api/delete/${clientId}`, { method: 'DELETE' })
+          .then(() => location.reload());
+      }
+    }
+
+    // Submit form tambah client
+$('#addClientForm').on('submit', function (e) {
+  e.preventDefault();
+
+  const clientId = $('#clientIdInput').val().trim();
+  if (!clientId) return;
+
+  fetch('/api/client', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ clientId })
+  })
+    .then(res => {
+      if (!res.ok) throw new Error('Gagal menambah client');
+      return res.json();
+    })
+    .then(data => {
+      $('#addClientModal').modal('hide');
+      Swal.fire({
+        icon: 'success',
+        title: 'Client Ditambahkan!',
+        text: 'Silakan scan QR untuk koneksi.',
+      }).then(() => location.reload());
+    })
+    .catch(err => {
+      Swal.fire({
+        icon: 'error',
+        title: 'Gagal',
+        text: err.message
+      });
+    });
+});
+
+  </script>
+</body>
+</html>

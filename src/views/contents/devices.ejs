@@ -1,0 +1,154 @@
+<% layout('../layouts/app.layout') %>
+
+
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="card">
+                <div class="card-body">
+                    <h4 class="card-title">Whatsapp Devices</h4>
+                    <p class="card-title-desc">
+                        This is a list of devices connected to your WhatsApp account. You can manage and remove devices
+                        as needed.
+                    </p>
+                    <hr>
+
+                    <div class="table-responsive">
+                        <table class="table mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Client ID</th>
+                                    <th>Status</th>
+                                    <th>Nomor</th>
+                                    <th>Nama</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% clients.forEach(c=> { %>
+                                    <tr>
+                                        <td>
+                                            <%= c.client_id %>
+                                        </td>
+                                        <td>
+                                            <% if (c.is_ready) { %>
+                                                <span class="badge bg-success">Connected</span>
+                                                <% } else { %>
+                                                    <span class="badge bg-warning text-dark">Not Connected</span>
+                                                    <% } %>
+                                        </td>
+                                        <td>
+                                            <%= c.phone_number || '-' %>
+                                        </td>
+                                        <td>
+                                            <%= c.device_name || '-' %>
+                                        </td>
+                                        <td>
+                                            <% if (!c.is_ready) { %>
+                                                <button class="btn btn-primary btn-sm"
+                                                    onclick="scanQR('<%= c.client_id %>')">Scan QR</button>
+                                                <% } %>
+                                                    <% if (c.is_ready) { %>
+                                                        <button class="btn btn-warning btn-sm"
+                                                            onclick="logoutClient('<%= c.client_id %>')">Logout</button>
+                                                        <% } %>
+                                                            <button class="btn btn-danger btn-sm"
+                                                                onclick="deleteClient('<%= c.client_id %>')">Delete</button>
+                                        </td>
+                                    </tr>
+                                    <% }); %>
+                            </tbody>
+                        </table>
+                        <button class="btn btn-primary mt-3" data-bs-toggle="modal"
+                            data-bs-target="#addClientModal">+ Tambah Client</button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal QR -->
+    <div class="modal fade" id="qrModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content text-center p-3">
+                <h5>Scan QR Code</h5>
+                <img id="qrImage" src="" alt="QR Code" class="img-fluid" style="max-width: 300px;" />
+            </div>
+        </div>
+    </div>
+    <!-- Modal Tambah Client -->
+    <div class="modal fade" id="addClientModal" tabindex="-1" aria-labelledby="addClientModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <form id="addClientForm" class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addClientModalLabel">Tambah Client Baru</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="clientIdInput" class="form-label">Client ID</label>
+                        <input type="text" class="form-control" id="clientIdInput" name="clientId" required
+                            placeholder="Contoh: toko-1, admin-bali, dsb">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">Tambah</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+
+        function scanQR(clientId) {
+            // Tampilkan loading spinner SweetAlert
+            Swal.fire({
+                title: 'Menunggu QR Code...',
+                text: 'Silakan tunggu beberapa detik',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            const evtSource = new EventSource(`/qr/${clientId}`);
+
+            evtSource.onmessage = function (event) {
+                const qrData = event.data;
+
+                // Tutup loading SweetAlert saat QR diterima
+                Swal.close();
+
+                // Set QR ke dalam modal & tampilkan modal
+                document.getElementById('qrImage').src = qrData;
+                const qrModal = new bootstrap.Modal(document.getElementById('qrModal'));
+                qrModal.show();
+
+                evtSource.close(); // QR sudah diterima, tidak perlu lanjut
+            };
+
+            evtSource.onerror = function () {
+                evtSource.close();
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Gagal Mendapatkan QR',
+                    text: 'Silakan coba lagi.',
+                });
+            };
+        }
+
+        function logoutClient(clientId) {
+            if (confirm('Yakin logout client ini?')) {
+                fetch(`/api/logout/${clientId}`, { method: 'DELETE' })
+                    .then(() => location.reload());
+            }
+        }
+
+        function deleteClient(clientId) {
+            if (confirm('Hapus client dan datanya?')) {
+                fetch(`/api/delete/${clientId}`, { method: 'DELETE' })
+                    .then(() => location.reload());
+            }
+        }
+    </script>
