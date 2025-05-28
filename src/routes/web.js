@@ -6,7 +6,7 @@ const multer = require('multer');
 const XLSX = require('xlsx');
 const fs = require('fs');
 
-const moment = require('moment'); 
+const moment = require('moment');
 
 const upload = multer({ dest: 'uploads/' });
 const { ensureAuthenticated } = require('../middlewares/auth.middleware');
@@ -24,16 +24,16 @@ initClientsFromDB();
 
 // Home page
 router.get('/', ensureAuthenticated, async (req, res) => {
-  res.render('contents/dashboard', { 
-      baseUrl: req.protocol + '://' + req.get('host')
+  res.render('contents/dashboard', {
+    baseUrl: req.protocol + '://' + req.get('host')
   });
 });
 
 router.get('/devices', ensureAuthenticated, async (req, res) => {
   const [clients] = await pool.query('SELECT * FROM clients');
-  res.render('contents/devices', { 
-      baseUrl: req.protocol + '://' + req.get('host'),
-      clients
+  res.render('contents/devices', {
+    baseUrl: req.protocol + '://' + req.get('host'),
+    clients
   });
 });
 
@@ -41,20 +41,20 @@ router.get('/devices', ensureAuthenticated, async (req, res) => {
 
 // ===== Router untuk mengelolad Kontak atau PHONEBOOK ======
 router.get('/contact', ensureAuthenticated, async (req, res) => {
-   const [clients] = await pool.query('SELECT * FROM clients where user_id = ?', [ req.user.id]);
-   const [categories] = await pool.query('SELECT contacts.*, clients.phone_number, clients.device_name FROM contacts INNER JOIN clients on contacts.client_id = clients.id where clients.user_id = ?', [ req.user.id]);
-    res.render('contents/contact/category', { 
-      baseUrl: req.protocol + '://' + req.get('host'),
-      clients,
-      categories
+  const [clients] = await pool.query('SELECT * FROM clients where user_id = ?', [req.user.id]);
+  const [categories] = await pool.query('SELECT contacts.*, clients.phone_number, clients.device_name FROM contacts INNER JOIN clients on contacts.client_id = clients.id where clients.user_id = ?', [req.user.id]);
+  res.render('contents/contact/category', {
+    baseUrl: req.protocol + '://' + req.get('host'),
+    clients,
+    categories
   });
 });
 router.post('/contact', ensureAuthenticated, async (req, res) => {
   const { title, description, clientId } = req.body;
   const uuid = require('crypto').randomUUID();
-    await pool.query('INSERT INTO contacts (title, description, uuid, client_id) VALUES (?, ?, ?, ?)', [title, description, uuid, clientId]);
-    res.redirect('/contact');
-  }
+  await pool.query('INSERT INTO contacts (title, description, uuid, client_id) VALUES (?, ?, ?, ?)', [title, description, uuid, clientId]);
+  res.redirect('/contact');
+}
 );
 router.put('/contact/:uuid', ensureAuthenticated, async (req, res) => {
   const { uuid } = req.params;
@@ -64,13 +64,15 @@ router.put('/contact/:uuid', ensureAuthenticated, async (req, res) => {
     const [response] = await pool.query('UPDATE contacts SET title = ?, description = ?, client_id = ? WHERE uuid = ?', [title, description, clientId, uuid]);
 
     if (response.affectedRows > 0) {
-      res.status(200).json({ 
+      res.status(200).json({
         status: true,
-        message: 'Contact updated successfully' });
+        message: 'Contact updated successfully'
+      });
     } else {
-      res.status(404).json({ 
+      res.status(404).json({
         status: false,
-        message: 'Contact not found' });
+        message: 'Contact not found'
+      });
     }
   } catch (error) {
     console.error('Update error:', error);
@@ -85,13 +87,15 @@ router.delete('/contact/:uuid', ensureAuthenticated, async (req, res) => {
     const [response] = await pool.query('DELETE FROM contacts WHERE uuid = ?', [uuid]);
 
     if (response.affectedRows > 0) {
-      res.status(200).json({ 
-        status : true,
-        message: 'Contact deleted successfully' });
+      res.status(200).json({
+        status: true,
+        message: 'Contact deleted successfully'
+      });
     } else {
-      res.status(200).json({ 
+      res.status(200).json({
         status: false,
-        message: 'Contact not found' });
+        message: 'Contact not found'
+      });
     }
   } catch (error) {
     console.error('Delete error:', error);
@@ -102,10 +106,10 @@ router.delete('/contact/:uuid', ensureAuthenticated, async (req, res) => {
 router.get('/phonebook/:uuid', ensureAuthenticated, async (req, res) => {
   const [phonebooks] = await pool.query("SELECT * FROM contact_lists where contact_id = (SELECT id FROM contacts WHERE uuid = ?)", [req.params.uuid]);
   console.log(phonebooks);
-  res.render('contents/contact/phonebook', { 
-      baseUrl: req.protocol + '://' + req.get('host'),
-      uuid: req.params.uuid,
-      phonebooks
+  res.render('contents/contact/phonebook', {
+    baseUrl: req.protocol + '://' + req.get('host'),
+    uuid: req.params.uuid,
+    phonebooks
   });
 });
 router.delete('/reset-phonebook/:uuid', ensureAuthenticated, async (req, res) => {
@@ -113,14 +117,16 @@ router.delete('/reset-phonebook/:uuid', ensureAuthenticated, async (req, res) =>
   try {
     const [response] = await pool.query('DELETE FROM contact_lists WHERE contact_id = (SELECT id FROM contacts WHERE uuid = ?)', [uuid]);
     if (response.affectedRows > 0) {
-      res.status(200).json({ 
+      res.status(200).json({
         status: true,
-        message: 'Phonebook reset successfully' });
+        message: 'Phonebook reset successfully'
+      });
     }
     else {
-      res.status(404).json({ 
+      res.status(404).json({
         status: false,
-        message: 'Phonebook not found' });
+        message: 'Phonebook not found'
+      });
     }
   } catch (error) {
     console.error('Reset error:', error);
@@ -132,14 +138,16 @@ router.delete('/delete-phonebook/:id', ensureAuthenticated, async (req, res) => 
   try {
     const [response] = await pool.query('DELETE FROM contact_lists WHERE id = ?', [id]);
     if (response.affectedRows > 0) {
-      res.status(200).json({ 
+      res.status(200).json({
         status: true,
-        message: 'Phonebook entry deleted successfully' });
+        message: 'Phonebook entry deleted successfully'
+      });
     }
     else {
       res.status(404).json({
         status: false,
-        message: 'Phonebook entry not found' });
+        message: 'Phonebook entry not found'
+      });
     }
   } catch (error) {
     console.error('Delete error:', error);
@@ -160,9 +168,9 @@ router.post('/add-phonebook', ensureAuthenticated, async (req, res) => {
         status: false,
         message: 'Phone number already exists in this contact'
       });
-    }else{
-  await pool.query('INSERT INTO contact_lists (phone, name, contact_id, created_at) VALUES (?, ?, ?, ?)', [phone, name, contactId, createdAt])
-      .catch(err => console.error('Error inserting contact:', err));
+    } else {
+      await pool.query('INSERT INTO contact_lists (phone, name, contact_id, created_at) VALUES (?, ?, ?, ?)', [phone, name, contactId, createdAt])
+        .catch(err => console.error('Error inserting contact:', err));
 
       res.status(200).json({
         status: true,
@@ -179,8 +187,8 @@ router.post('/add-phonebook', ensureAuthenticated, async (req, res) => {
     });
   }
 });
-router.post('/import-phonebook',  upload.single('excelFile'), ensureAuthenticated, async (req, res) => {
-   const workbook = XLSX.readFile(req.file.path);
+router.post('/import-phonebook', upload.single('excelFile'), ensureAuthenticated, async (req, res) => {
+  const workbook = XLSX.readFile(req.file.path);
   const sheetName = workbook.SheetNames[0];
   const worksheet = workbook.Sheets[sheetName];
   const data = XLSX.utils.sheet_to_json(worksheet);
@@ -191,23 +199,23 @@ router.post('/import-phonebook',  upload.single('excelFile'), ensureAuthenticate
   const [contacts] = await pool.query('SELECT * FROM contacts WHERE uuid = ?', [uuid]);
 
   if (contacts.length > 0) {
-  const contactId = contacts[0].id;
+    const contactId = contacts[0].id;
 
 
-  data.forEach( async element => {
-    console.log(element);
-    if(element){
-      const { Hp, Nama } = element;
-      if (Hp && Nama) {
-        const createdAt = new Date();
-       await pool.query('INSERT INTO contact_lists (phone, name, contact_id, created_at) VALUES (?, ?, ?,?)', [Hp, Nama, contactId, createdAt])
-          .catch(err => console.error('Error inserting contact:', err));
+    data.forEach(async element => {
+      console.log(element);
+      if (element) {
+        const { Hp, Nama } = element;
+        if (Hp && Nama) {
+          const createdAt = new Date();
+          await pool.query('INSERT INTO contact_lists (phone, name, contact_id, created_at) VALUES (?, ?, ?,?)', [Hp, Nama, contactId, createdAt])
+            .catch(err => console.error('Error inserting contact:', err));
+        }
       }
-    }
-  });
+    });
   } else {
-  console.log('Contact not found');
-}
+    console.log('Contact not found');
+  }
   res.redirect('/phonebook/' + uuid);
 });
 
@@ -220,20 +228,20 @@ router.post('/import-phonebook',  upload.single('excelFile'), ensureAuthenticate
 
 router.get('/broadcast', ensureAuthenticated, async (req, res) => {
   // Ambil daftar klien berdasarkan user_id
-  const [clients] = await pool.query('SELECT * FROM clients where user_id = ?', [ req.user.id]);
-  res.render('contents/broadcast/index', { 
-      baseUrl: req.protocol + '://' + req.get('host'),
-      clients
+  const [clients] = await pool.query('SELECT * FROM clients where user_id = ?', [req.user.id]);
+  res.render('contents/broadcast/index', {
+    baseUrl: req.protocol + '://' + req.get('host'),
+    clients
   });
 });
 router.get('/messages/:uuid', ensureAuthenticated, async (req, res) => {
   // get oranater uuid
-const uuid = req.params.uuid;
+  const uuid = req.params.uuid;
   const [broadcasts] = await pool.query("SELECT * FROM broadcasts where client_id = (SELECT id FROM clients WHERE uuid = ?)", [uuid]);
-  res.render('contents/broadcast/message', { 
-      baseUrl: req.protocol + '://' + req.get('host'),
-      uuid,
-      broadcasts
+  res.render('contents/broadcast/message', {
+    baseUrl: req.protocol + '://' + req.get('host'),
+    uuid,
+    broadcasts
   });
 });
 
@@ -355,18 +363,115 @@ router.delete('/broadcast/:id', ensureAuthenticated, async (req, res) => {
     const [response] = await pool.query('DELETE FROM broadcasts WHERE id = ?', [id]);
 
     if (response.affectedRows > 0) {
-      res.status(200).json({ 
+      res.status(200).json({
         status: true,
-        message: 'Broadcast deleted successfully' });
+        message: 'Broadcast deleted successfully'
+      });
     } else {
-      res.status(404).json({ 
+      res.status(404).json({
         status: false,
-        message: 'Broadcast not found' });
+        message: 'Broadcast not found'
+      });
     }
   } catch (error) {
     console.error('Delete error:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
+});
+
+router.get('/manage-broadcast/:uuid', ensureAuthenticated, async (req, res) => {
+  const uuidManage = req.params.uuid;
+  const [broadcasts] = await pool.query("SELECT * FROM queues where broadcast_id = (SELECT id FROM broadcasts WHERE uuid = ?)", [uuidManage]);
+  
+  const broadcast = await pool.query("SELECT client_id FROM broadcasts WHERE uuid = ?", [uuidManage]);
+  const client_id = broadcast[0].client_id;
+  const [phonebooks] = await pool.query("SELECT * FROM contacts where client_id = ?", [client_id]);
+  const status = 'waiting';
+  res.render('contents/broadcast/broadcast', {
+    baseUrl: req.protocol + '://' + req.get('host'),
+    client_id,
+    uuid: uuidManage,
+    broadcasts,
+    phonebooks,
+    status
+  });
+}
+);
+
+router.delete('/manage-broadcast/:uuid', ensureAuthenticated, async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const [response] = await pool.query('DELETE FROM broadcasts WHERE id = ?', [id]);
+
+    if (response.affectedRows > 0) {
+      res.status(200).json({
+        status: true,
+        message: 'Broadcast deleted successfully'
+      });
+    } else {
+      res.status(404).json({
+        status: false,
+        message: 'Broadcast not found'
+      });
+    }
+  } catch (error) {
+    console.error('Delete error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+router.post('/manage-broadcast', ensureAuthenticated, async (req, res) => {
+  const { uuid, broadcastId, phone } = req.body;
+
+  if (!uuid || !broadcastId || !phone) {
+    return res.status(400).json({
+      status: false,
+      message: 'UUID, broadcast ID, and phone number are required'
+    });
+  }
+
+  // get client_id from uuid
+  const [clients] = await pool.query('SELECT * FROM clients WHERE uuid = ?', [uuid]);
+  if (clients.length === 0) {
+    return res.status(404).json({
+      status: false,
+      message: 'Client not found'
+    });
+  }
+  const clientID = clients[0].id;
+
+  // get broadcast from database
+  const [broadcasts] = await pool.query('SELECT * FROM broadcasts WHERE id = ? AND client_id = ?', [broadcastId, clientID]);
+  if (broadcasts.length === 0) {
+    return res.status(404).json({
+      status: false,
+      message: 'Broadcast not found'
+    });
+  }
+
+  // Simpan ke database
+  const query = `
+    INSERT INTO broadcast_recipients (broadcast_id, phone)
+    VALUES (?, ?)
+  `;
+  await pool.query(query, [broadcastId, phone]);
+
+  return res.status(200).json({
+    status: true,
+    message: 'Recipient added successfully'
+  });
+}
+);
+
+router.post('/manage-broadcast/import', ensureAuthenticated, async (req, res) => {
+  const { uuid, broadcastId } = req.body;
+
+
+  res.status(200).json({
+    status: true,
+    message: 'Recipients imported successfully'
+  });
 });
 
 
@@ -379,7 +484,7 @@ router.delete('/broadcast/:id', ensureAuthenticated, async (req, res) => {
 
 
 
-router.get('/scan', ensureAuthenticated,async (req, res) => {
+router.get('/scan', ensureAuthenticated, async (req, res) => {
   const [clients] = await pool.query('SELECT * FROM clients');
   res.render('index', { clients });
 });
