@@ -21,11 +21,13 @@
     "ejs-locals": "^1.0.2",
     "express": "^5.1.0",
     "express-ejs-layouts": "^2.5.1",
+    "express-fileupload": "^1.5.1",
     "express-session": "^1.18.1",
     "multer": "^2.0.0",
     "mysql2": "^3.14.1",
     "qrcode": "^1.5.4",
     "qrcode-terminal": "^0.12.0",
-    "whatsapp-web.js": "^1.28.0"
+    "whatsapp-web.js": "^1.28.0",
+    "xlsx": "^0.18.5"
   }
 }

@@ -1,0 +1,292 @@
+<% layout('../../layouts/app.layout') %>
+
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="card">
+                <div class="card-body">
+                    <h4 class="card-title">Filter Client ID</h4>
+                    <p class="card-title-desc">
+                        Layanan Aktif Fliter
+                    </p>
+                    <hr>
+                    <div class="row">
+                        <form id="filterForm" action="/contents/contact/category" method="GET">
+                            <div class="col-md-12">
+                                <div class="row">
+                                    <div class="form-group">
+                                        <label for="clientId">Pilih Client</label>
+                                        <select class="form-control" id="clientId" name="clientId">
+                                            <option value="">Semua Client</option>
+                                            <% if (clients && clients.length> 0) { %>
+                                                <% clients.forEach(client=> { %>
+                                                    <option value="<%= client.uuid %>">
+                                                        <%= client.device_name %> / <%= client.phone_number %>
+                                                    </option>
+                                                    <% }) %>
+                                                        <% } else { %>
+                                                            <option value="">Tidak ada client tersedia</option>
+                                                            <% } %>
+                                        </select>
+                                    </div>
+
+                                </div>
+                            </div>
+
+                         
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                                  <button type="submit" class="btn btn-primary">Filter</button>
+
+                            </div>
+                        </div>
+                    </div>
+                        </form>
+
+
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="card">
+                <div class="card-body">
+                    <h4 class="card-title">Kontak</h4>
+                    <p class="card-title-desc">
+                        This is a list of devices connected to your WhatsApp account. You can manage and remove devices
+                        as needed.
+                    </p>
+                    <hr>
+
+                    <div class="table-responsive">
+                        <table class="table mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Client Name</th>
+                                    <th>Phone</th>
+                                    <th>Judul</th>
+                                    <th>Deskripsi</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% if (categories && categories.length > 0) { %>
+                                    <% categories.forEach(category => { %>
+                                        <tr>
+                                            <td><%= category.device_name %></td>
+                                            <td> <%= category.phone_number %></td>
+                                            <td><%= category.title %></td>
+                                            <td><%= category.description %></td>
+                                            <td>
+                                                <a href="/phonebook/<%= category.uuid %>"
+                                                   class="btn btn-primary btn-sm">Kelola</a>
+                                                <a aria-modal="true" data-bs-toggle="modal"
+                                                   data-bs-target="#editCategoryModal<%= category.id %>"
+                                                   class="btn btn-info btn-sm">Edit</a>
+                                           
+                                                <button onclick="deleteData('<%= category.title %>','<%= category.uuid %>')"
+                                                        class="btn btn-danger btn-sm delete">Hapus</button>
+                                            </td>
+                                        </tr>
+                                    <% }) %>
+                                <% } else { %>
+                                    <tr>
+                                        <td colspan="5" class="text-center">Tidak ada kategori tersedia</td>
+                                    </tr>
+                                <% } %>
+
+                            </tbody>
+                        </table>
+
+                    </div>
+                    <div class="mt-3">
+                        <!-- //show modal tambah kategori  -->
+                         <button type="button" class="btn btn-success" data-bs-toggle="modal"
+                                 data-bs-target="#addCategoryModal">
+                            Tambah Kategori
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+<!-- Modal Tambah Kategori -->
+<div class="modal fade" id="addCategoryModal" tabindex="-1" aria-labelledby="addCategoryModalLabel"
+     aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addCategoryModalLabel">Tambah Kategori</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addCategoryForm" action="/contact" method="POST">
+                    <div class="mb-3">
+                        <label for="clientId" class="form-label">Client ID</label>
+                        <select class="form-control" id="clientId" name="clientId" required>
+                            <% if (clients && clients.length > 0) { %>
+                                <% clients.forEach(client => { %>
+                                    <option value="<%= client.id %>"><%= client.device_name %> / <%= client.phone_number %></option>
+                                <% }) %>
+                            <% } else { %>
+                                <option value="">Tidak ada client tersedia</option>
+                            <% } %>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="title" class="form-label">Judul</label>
+                        <input type="text" class="form-control" id="title" name="title" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Deskripsi</label>
+                        <textarea class="form-control" id="description" name="description"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Simpan</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Edit Kategori -->
+<% categories.forEach(category => { %>
+<div class="modal fade" id="editCategoryModal<%= category.id %>" tabindex="-1" aria-labelledby="editCategoryModalLabel<%= category.id %>"
+     aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editCategoryModalLabel<%= category.id %>">Edit Kategori</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form  action="#" id="submitEdit" class="submitEdit" method="POST">
+                    <!-- //method put -->
+                    <input type="text" name="client_id" id="client_id" value="<%= category.uuid %>">
+                    <div class="mb-3">
+                        <label for="clientId" class="form-label">Client ID</label>
+                        <select class="form-control" id="clientId" name="clientId" required>
+                            <% if (clients && clients.length > 0) { %>
+                                <% clients.forEach(client => { %>
+                                    <option value="<%= client.id %>" <%= client.uuid === category.client_id ? 'selected' : '' %>><%= client.device_name %> / <%= client.phone_number %></option>
+                                <% }) %>
+                            <% } else { %>
+                                <option value="">Tidak ada client tersedia</option>
+                            <% } %>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="title" class="form-label">Judul</label>
+                        <input type="text" class="form-control" id="title" name="title" value="<%= category.title %>" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Deskripsi</label>
+                        <textarea class="form-control" id="description" name="description"><%= category.description %></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Simpan</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<% }) %>
+
+    <script>
+        //submit form edit kategori
+        document.querySelectorAll('.submitEdit').forEach(form => {
+            form.addEventListener('submit', function (e) {
+                e.preventDefault();
+                const formData = new FormData(this);
+                const uuid = formData.get('client_id');
+                const title = formData.get('title');
+                const description = formData.get('description');
+                const clientId = formData.get('clientId');
+                console.log(uuid, title, description, clientId);
+                fetch(`/contact/`+uuid, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ title, description, clientId })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status) {
+                        Swal.fire(
+                            'Berhasil!',
+                            'Kategori telah diperbarui.',
+                            'success'
+                        ).then(() => {
+                            location.reload();
+                        });
+                    } else {
+                        Swal.fire(
+                            'Error!',
+                            data.message || 'Terjadi kesalahan saat memperbarui kategori.',
+                            'error'
+                        );
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    Swal.fire(
+                        'Error!',
+                        'Terjadi kesalahan saat memperbarui kategori.',
+                        'error'
+                    );
+                });
+            });
+        });
+        function deleteData(title, uuid) {
+           Swal.fire({
+                title: 'Hapus Kategori',
+                html: "Apakah Anda yakin ingin menghapus kategori <b>"+title+" </b>?",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Ya, hapus!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    fetch(`/contact/${uuid}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log(data);
+                        if (data.status) {
+                            Swal.fire(
+                                'Deleted!',
+                                'Kategori telah dihapus.',
+                                'success'
+                            ).then(() => {
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire(
+                                'Error!',
+                                data.message || 'Terjadi kesalahan saat menghapus kategori.',
+                                'error'
+                            );
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        Swal.fire(
+                            'Error!',
+                            'Terjadi kesalahan saat menghapus kategori.',
+                            'error'
+                        );
+                    });
+                }
+            });
+        }
+
+
+    </script>

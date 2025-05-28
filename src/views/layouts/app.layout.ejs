@@ -19,6 +19,26 @@
         <link href="<%= baseUrl %>/assets/css/app.min.css" id="app-style" rel="stylesheet" type="text/css" />
 
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  
+        <!-- JAVASCRIPT -->
+        <script src="<%= baseUrl %>/assets/libs/jquery/jquery.min.js"></script>
+        <script src="<%= baseUrl %>/assets/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
+        <script src="<%= baseUrl %>/assets/libs/metismenu/metisMenu.min.js"></script>
+        <script src="<%= baseUrl %>/assets/libs/simplebar/simplebar.min.js"></script>
+        <script src="<%= baseUrl %>/assets/libs/node-waves/waves.min.js"></script>
+
+        <!-- apexcharts -->
+        <script src="<%= baseUrl %>/assets/libs/apexcharts/apexcharts.min.js"></script>
+        
+
+
+        <!-- Saas dashboard init -->
+        <script src="<%= baseUrl %>/assets/js/pages/saas-dashboard.init.js"></script>
+
+
+
+        <script src="<%= baseUrl %>/assets/js/app.js"></script>
+
     </head>
 
     <body data-sidebar="dark">
@@ -158,11 +178,11 @@
                                 </a>
                                 <ul class="sub-menu" aria-expanded="true">
                                     <li>
-                                        <a href="javascript: void(0);"  key="t-vertical">Users</a>
+                                        <a href="/users"  key="t-users">Users</a>
                                         
                                     </li>
                                       <li>
-                                        <a href="/devices"  key="t-vertical">Devices</a>
+                                        <a href="/devices"  key="t-devices">Devices</a>
                                         
                                     </li>
 
@@ -293,20 +313,9 @@
         <!-- Right bar overlay-->
         <div class="rightbar-overlay"></div>
 
-        <!-- JAVASCRIPT -->
-        <script src="<%= baseUrl %>/assets/libs/jquery/jquery.min.js"></script>
-        <script src="<%= baseUrl %>/assets/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
-        <script src="<%= baseUrl %>/assets/libs/metismenu/metisMenu.min.js"></script>
-        <script src="<%= baseUrl %>/assets/libs/simplebar/simplebar.min.js"></script>
-        <script src="<%= baseUrl %>/assets/libs/node-waves/waves.min.js"></script>
+        <!-- tampilkan script jika gagal error message sweetalert -->
 
-        <!-- apexcharts -->
-        <script src="<%= baseUrl %>/assets/libs/apexcharts/apexcharts.min.js"></script>
         
-        <!-- Saas dashboard init -->
-        <script src="<%= baseUrl %>/assets/js/pages/saas-dashboard.init.js"></script>
-
-        <script src="<%= baseUrl %>/assets/js/app.js"></script>
 
     </body>
 </html>

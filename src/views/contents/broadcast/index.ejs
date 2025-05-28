@@ -43,8 +43,8 @@
                                             <%= c.device_name || '-' %>
                                         </td>
                                         <td>
-                                              <button class="btn btn-success btn-sm"
-                                                            >   Message</button>
+                                              <a class="btn btn-success btn-sm" href="/messages/<%= c.uuid %>"
+                                                            >   Message</a>
                                             <% if (!c.is_ready) { %>
                                                 <button class="btn btn-primary btn-sm"
                                                     onclick="scanQR('<%= c.client_id %>')">Scan QR</button>
