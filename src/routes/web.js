@@ -4,6 +4,9 @@ const pool = require('../config/database');
 const path = require('path');
 const multer = require('multer');
 const XLSX = require('xlsx');
+const fs = require('fs');
+
+const moment = require('moment'); 
 
 const upload = multer({ dest: 'uploads/' });
 const { ensureAuthenticated } = require('../middlewares/auth.middleware');
@@ -235,55 +238,136 @@ const uuid = req.params.uuid;
 });
 
 router.post('/broadcast', ensureAuthenticated, async (req, res) => {
-  const { title, message, uuid } = req.body;
-  const attachment = req.files?.attachment;
-  //cek mimetype attachment maksimal 10mb, type image png, jpg, jpeg, gif, mp3, docx, pdf, xlsx, xls, doc, pptx, ppt
-  const allowedMimeTypes = [
-    'image/png',
-    'image/jpg',
-    'image/jpeg',
-    'image/gif',
-    'audio/mpeg',
-    'application/pdf',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // docx
-    'application/msword', // doc
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // xlsx
-    'application/vnd.ms-excel', // xls
-    'application/vnd.openxmlformats-officedocument.presentationml.presentation', // pptx
-    'application/vnd.ms-powerpoint' // ppt
-  ];
-  const maxFileSize = 10 * 1024 * 1024; // 10 MB
-  if (attachment) {
-    const file = attachment; // Assuming 'attachment' is the file object from the request
-    if (!allowedMimeTypes.includes(file.mimetype)) {
+  try {
+    const { title, message: caption, uuid } = req.body;
+    const file = req.files?.attachment;
+
+    if (!uuid || !title || !caption) {
       return res.status(400).json({
         status: false,
-        message: 'Invalid file type. Allowed types are: ' + allowedMimeTypes.join(', ')
+        message: 'UUID, title, and message are required'
       });
     }
-    if (file.size > maxFileSize) {
-      return res.status(400).json({
+
+    // get client_id from uuid
+    const [clients] = await pool.query('SELECT * FROM clients WHERE uuid = ?', [uuid]);
+    if (clients.length === 0) {
+      return res.status(404).json({
         status: false,
-        message: 'File size exceeds the maximum limit of 10 MB'
+        message: 'Client not found'
       });
     }
-    // Save the file to the server or process it as needed
-    const filePath = path.join(__dirname, '../../public/uploads/'+uuid+'/', file.originalname);
-    await file.mv(filePath, (err) => {
-      if (err) {
-        console.error('File upload error:', err);
-        return res.status(500).json({
+    const clientID = clients[0].id;
+
+    const allowedMimeTypes = {
+      image: ['image/png', 'image/jpg', 'image/jpeg', 'image/gif'],
+      video: ['video/mp4', 'video/3gpp', 'video/quicktime'],
+      audio: ['audio/mpeg'],
+      document: [
+        'application/pdf',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        'application/vnd.ms-powerpoint'
+      ]
+    };
+
+    const maxFileSize = 10 * 1024 * 1024; // 10 MB
+    let attachmentType = 'text';
+    let attachmentLink = null;
+
+    if (file) {
+      if (file.size > maxFileSize) {
+        return res.status(400).json({
           status: false,
-          message: 'File upload failed'
+          message: 'File size exceeds the maximum limit of 10 MB'
         });
       }
-      console.log('File uploaded successfully:', filePath);
+
+      const mime = file.mimetype;
+      if (
+        ![
+          ...allowedMimeTypes.image,
+          ...allowedMimeTypes.video,
+          ...allowedMimeTypes.audio,
+          ...allowedMimeTypes.document
+        ].includes(mime)
+      ) {
+        return res.status(400).json({
+          status: false,
+          message: 'Invalid file type.'
+        });
+      }
+
+      // Tentukan tipe attachment berdasarkan mimetype
+      if (allowedMimeTypes.image.includes(mime)) {
+        attachmentType = 'image';
+      } else if (allowedMimeTypes.video.includes(mime)) {
+        attachmentType = 'video';
+      } else {
+        attachmentType = 'document';
+      }
+
+      const uploadDir = path.join(__dirname, '../../public/uploads/', uuid);
+      const fileName = Date.now() + '_' + file.name;
+      const filePath = path.join(uploadDir, fileName);
+      const publicPath = `/uploads/${uuid}/${fileName}`;
+
+      // Pastikan direktori ada
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+
+      await file.mv(filePath);
+
+      attachmentLink = publicPath;
+    }
+
+    const createdAt = moment().format('YYYY-MM-DD HH:mm:ss');
+
+    // Simpan ke database
+    const query = `
+      INSERT INTO broadcasts (client_id, title, caption, attachment_type, attachment_link, created_at, uuid)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `;
+    const uuidBroadcast = require('crypto').randomUUID();
+    await pool.query(query, [clientID, title, caption, attachmentType, attachmentLink, createdAt, uuidBroadcast]);
+
+    return res.status(200).json({
+      status: true,
+      message: 'Broadcast created successfully'
     });
-  } else {
-    console.log('No attachment provided');
+  } catch (error) {
+    console.error('Broadcast error:', error);
+    return res.status(500).json({
+      status: false,
+      message: 'Internal server error'
+    });
   }
-}
-);
+});
+
+router.delete('/broadcast/:id', ensureAuthenticated, async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const [response] = await pool.query('DELETE FROM broadcasts WHERE id = ?', [id]);
+
+    if (response.affectedRows > 0) {
+      res.status(200).json({ 
+        status: true,
+        message: 'Broadcast deleted successfully' });
+    } else {
+      res.status(404).json({ 
+        status: false,
+        message: 'Broadcast not found' });
+    }
+  } catch (error) {
+    console.error('Delete error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
 
 
 
