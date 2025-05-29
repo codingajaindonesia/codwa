@@ -381,12 +381,24 @@ router.delete('/broadcast/:id', ensureAuthenticated, async (req, res) => {
 
 router.get('/manage-broadcast/:uuid', ensureAuthenticated, async (req, res) => {
   const uuidManage = req.params.uuid;
+
   const [broadcasts] = await pool.query("SELECT * FROM queues where broadcast_id = (SELECT id FROM broadcasts WHERE uuid = ?)", [uuidManage]);
-  
-  const broadcast = await pool.query("SELECT client_id FROM broadcasts WHERE uuid = ?", [uuidManage]);
+  const [broadcast] = await pool.query("SELECT client_id FROM broadcasts WHERE uuid = ?", [uuidManage]);
   const client_id = broadcast[0].client_id;
   const [phonebooks] = await pool.query("SELECT * FROM contacts where client_id = ?", [client_id]);
-  const status = 'waiting';
+  const [statusWhatsapp] = await pool.query("SELECT * from queues where broadcast_id = (SELECT id FROM broadcasts WHERE uuid = ?) and status = 'waiting'", [uuidManage]);
+  
+  
+  
+  
+  var status = 'success';
+  if (statusWhatsapp.length > 0) {
+     status = 'waiting';
+  }
+  console.log(statusWhatsapp);
+  console.log(status);
+  
+ 
   res.render('contents/broadcast/broadcast', {
     baseUrl: req.protocol + '://' + req.get('host'),
     client_id,
@@ -465,19 +477,188 @@ router.post('/manage-broadcast', ensureAuthenticated, async (req, res) => {
 );
 
 router.post('/manage-broadcast/import', ensureAuthenticated, async (req, res) => {
-  const { uuid, broadcastId } = req.body;
+  const { uuid, phonebook } = req.body;
+
+  try {
+    const [clients] = await pool.query(
+      'SELECT id, client_id FROM broadcasts WHERE uuid = ?',
+      [uuid]
+    );
+
+    if (clients.length === 0) {
+      return res.status(200).json({
+        status: false,
+        message: 'Contact not found',
+      });
+    }
+
+    const clientID = clients[0].client_id;
+    const broadcastID = clients[0].id;
 
 
-  res.status(200).json({
-    status: true,
-    message: 'Recipients imported successfully'
-  });
+    const [result] = await pool.query(
+      `
+     INSERT IGNORE  INTO queues (phone, name, broadcast_id)
+SELECT cl.phone, cl.name, ? AS broadcast_id
+FROM contact_lists cl
+WHERE cl.contact_id IN (
+  SELECT id FROM contacts WHERE client_id = ?
+)
+      `,
+      [broadcastID, clientID]
+    );
+
+    res.status(200).json({
+      status: true,
+      message: `Successfully imported ${result.affectedRows} contacts into the queue.`,
+    });
+
+  } catch (err) {
+    console.error('Error:', err);
+    res.status(500).json({
+      status: false,
+      message: 'Internal Server Error',
+    });
+  }
 });
+router.delete('/manage-broadcast/queue/:id', ensureAuthenticated, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const [response] = await pool.query('DELETE FROM queues WHERE id = ?', [id]);
+    if (response.affectedRows > 0) {
+      res.status(200).json({
+        status: true,
+        message: 'Queue entry deleted successfully'
+      });
+    }
+    else {
+      res.status(404).json({
+        status: false,
+        message: 'Queue entry not found'
+      });
+    }
+  } catch (error) {
+    console.error('Delete error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+}
+);
+
+router.post('/manage-broadcast/send/:uuid', ensureAuthenticated, async (req, res) => {
+  const { uuid } = req.params;
+
+  try {
+    // get client_id from uuid
+     const [queues] = await pool.query("UPDATE queues SET status = 'waiting' WHERE broadcast_id = (SELECT id FROM broadcasts WHERE uuid = ?) and status = 'pending'", [uuid]);
+
+    if (queues.length === 0) {
+      return res.status(404).json({
+        status: false,
+        message: 'No pending queues found for this broadcast'
+      });
+    }
+  
+
+    return res.status(200).json({
+      status: true,
+      message: 'Broadcast queue updated successfully, ready to send'
+    });
+  } catch (error) {
+    console.error('Send broadcast error:', error);
+    return res.status(500).json({
+      status: false,
+      message: 'Internal server error'
+    });
+  }
+}
+);
+router.post('/manage-broadcast/stop/:uuid', ensureAuthenticated, async (req, res) => {
+  const { uuid } = req.params;
+
+  try {
+    // get client_id from uuid
+    const [queues] = await pool.query("UPDATE queues SET status = 'pending' WHERE broadcast_id = (SELECT id FROM broadcasts WHERE uuid = ?) and status = 'waiting'", [uuid]);
+
+    if (queues.length === 0) {
+      return res.status(404).json({
+        status: false,
+        message: 'No waiting queues found for this broadcast'
+      });
+    }
+
+    return res.status(200).json({
+      status: true,
+      message: 'Broadcast queue stopped successfully'
+    });
+  } catch (error) {
+    console.error('Stop broadcast error:', error);
+    return res.status(500).json({
+      status: false,
+      message: 'Internal server error'
+    });
+  }
+}
+);
+
+router.post('/manage-broadcast/add', ensureAuthenticated, async (req, res) => {
+  const { phone, name, uuid } = req.body;
+  try {
+    // get broadcastID from uuid
+    const [broadcast] = await pool.query('SELECT id FROM broadcasts WHERE uuid = ?', [uuid]);
+    if (broadcast.length === 0) {
+      return res.status(404).json({
+        status: false,
+        message: 'Broadcast not found'
+      });
+    }
+    const broadcastID = broadcast[0].id;
+    // Simpan ke database
+    const query = `
+      INSERT IGNORE INTO queues (phone, name, broadcast_id)
+      VALUES (?, ?, ?)
+    `;
+    await pool.query(query, [phone, name, broadcastID]);
+    return res.status(200).json({
+      status: true,
+      message: 'Recipient added successfully'
+    });
+  } catch (error) {
+    console.error('Add recipient error:', error);
+    return res.status(500).json({
+      status: false,
+      message: 'Internal server error'
+    });
+  }
+});
+router.delete('/manage-broadcast/reset/:uuid', ensureAuthenticated, async (req, res) => {
+  const { uuid } = req.params;
+
+  try {
+    // Hapus semua antrian untuk broadcast tertentu
+    const [response] = await pool.query('DELETE FROM queues WHERE broadcast_id = (SELECT id FROM broadcasts WHERE uuid = ?)', [uuid]);
+
+    if (response.affectedRows > 0) {
+      res.status(200).json({
+        status: true,
+        message: 'Broadcast queue reset successfully'
+      });
+    } else {
+      res.status(404).json({
+        status: false,
+        message: 'Broadcast not found'
+      });
+    }
+  } catch (error) {
+    console.error('Reset error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+}
+);
+
 
 
 
 // ======== end ROuter untuk melakukan broadcast ======================
-
 
 
 
