@@ -105,7 +105,6 @@ router.delete('/contact/:uuid', ensureAuthenticated, async (req, res) => {
 
 router.get('/phonebook/:uuid', ensureAuthenticated, async (req, res) => {
   const [phonebooks] = await pool.query("SELECT * FROM contact_lists where contact_id = (SELECT id FROM contacts WHERE uuid = ?)", [req.params.uuid]);
-  console.log(phonebooks);
   res.render('contents/contact/phonebook', {
     baseUrl: req.protocol + '://' + req.get('host'),
     uuid: req.params.uuid,
@@ -180,7 +179,6 @@ router.post('/add-phonebook', ensureAuthenticated, async (req, res) => {
 
 
   } else {
-    console.log('Contact not found');
     res.status(404).json({
       status: false,
       message: 'Contact not found'
@@ -193,7 +191,6 @@ router.post('/import-phonebook', upload.single('excelFile'), ensureAuthenticated
   const worksheet = workbook.Sheets[sheetName];
   const data = XLSX.utils.sheet_to_json(worksheet);
   const { uuid } = req.body;
-  console.log(uuid);
 
 
   const [contacts] = await pool.query('SELECT * FROM contacts WHERE uuid = ?', [uuid]);
@@ -203,7 +200,6 @@ router.post('/import-phonebook', upload.single('excelFile'), ensureAuthenticated
 
 
     data.forEach(async element => {
-      console.log(element);
       if (element) {
         const { Hp, Nama } = element;
         if (Hp && Nama) {
@@ -235,14 +231,47 @@ router.get('/broadcast', ensureAuthenticated, async (req, res) => {
   });
 });
 router.get('/messages/:uuid', ensureAuthenticated, async (req, res) => {
-  // get oranater uuid
   const uuid = req.params.uuid;
-  const [broadcasts] = await pool.query("SELECT * FROM broadcasts where client_id = (SELECT id FROM clients WHERE uuid = ?)", [uuid]);
-  res.render('contents/broadcast/message', {
-    baseUrl: req.protocol + '://' + req.get('host'),
-    uuid,
-    broadcasts
-  });
+
+  try {
+    // Ambil client_id berdasarkan uuid
+    const [clients] = await pool.query("SELECT id FROM clients WHERE uuid = ?", [uuid]);
+    if (clients.length === 0) {
+      return res.status(404).send('Client not found');
+    }
+
+    const clientId = clients[0].id;
+
+    // Ambil semua broadcast milik client tersebut
+    const [broadcasts] = await pool.query("SELECT * FROM broadcasts WHERE client_id = ?", [clientId]);
+
+    // Ambil statistik untuk setiap broadcast
+    for (let broadcast of broadcasts) {
+      const [statsRows] = await pool.query(`
+        SELECT 
+          COUNT(*) AS total,
+          SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending,
+          SUM(CASE WHEN status = 'waiting' THEN 1 ELSE 0 END) AS waiting,
+          SUM(CASE WHEN status = 'sent' THEN 1 ELSE 0 END) AS sent,
+          SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS failed
+        FROM queues
+        WHERE broadcast_id = ?
+      `, [broadcast.id]);
+
+      broadcast.stats = statsRows[0]; // tambahkan properti 'stats' ke masing-masing broadcast
+    }
+
+    console.log(broadcasts);
+    res.render('contents/broadcast/message', {
+      baseUrl: req.protocol + '://' + req.get('host'),
+      uuid,
+      broadcasts
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Internal Server Error');
+  }
 });
 
 router.post('/broadcast', ensureAuthenticated, async (req, res) => {
@@ -383,13 +412,23 @@ router.get('/manage-broadcast/:uuid', ensureAuthenticated, async (req, res) => {
   const uuidManage = req.params.uuid;
 
   const [broadcasts] = await pool.query("SELECT * FROM queues where broadcast_id = (SELECT id FROM broadcasts WHERE uuid = ?)", [uuidManage]);
-  const [broadcast] = await pool.query("SELECT client_id FROM broadcasts WHERE uuid = ?", [uuidManage]);
+  const [broadcast] = await pool.query("SELECT client_id, id FROM broadcasts WHERE uuid = ?", [uuidManage]);
   const client_id = broadcast[0].client_id;
   const [phonebooks] = await pool.query("SELECT * FROM contacts where client_id = ?", [client_id]);
   const [statusWhatsapp] = await pool.query("SELECT * from queues where broadcast_id = (SELECT id FROM broadcasts WHERE uuid = ?) and status = 'waiting'", [uuidManage]);
   
-  
-  
+  const [statusQueues] = await pool.query(`
+  SELECT 
+    COUNT(*) AS total,
+    SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending,
+    SUM(CASE WHEN status = 'waiting' THEN 1 ELSE 0 END) AS waiting,
+    SUM(CASE WHEN status = 'sent' THEN 1 ELSE 0 END) AS sent,
+    SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS failed
+  FROM queues WHERE broadcast_id = ?
+`, [broadcast[0].id]);
+
+const statsQueue = statusQueues[0];
+  console.log(statusQueues);
   
   var status = 'success';
   if (statusWhatsapp.length > 0) {
@@ -405,7 +444,8 @@ router.get('/manage-broadcast/:uuid', ensureAuthenticated, async (req, res) => {
     uuid: uuidManage,
     broadcasts,
     phonebooks,
-    status
+    status,
+    statsQueue
   });
 }
 );

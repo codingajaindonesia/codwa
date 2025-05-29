@@ -45,16 +45,19 @@
                                             <!-- Display status total, pending, sent, failed jumlah pesannya badgenya gede lagi -->
 
                                             <span class="btn btn-primary btn-sm" style="size: 15px;">
-                                                Total: <%= broadcast.is_total %>
+                                                Total: <%= broadcast.stats['total'] ?? 0 %>
                                             </span>
                                             <span class="btn btn-secondary btn-sm">
-                                                Pending: <%= broadcast.is_pending %>
+                                                Pending: <%= broadcast.stats['pending'] ?? 0 %>
+                                            </span>
+                                                <span class="btn btn-warning btn-sm">
+                                                Waiting: <%= broadcast.stats['waiting'] ?? 0 %>
                                             </span>
                                             <span class="btn btn-success btn-sm">
-                                                Sent: <%= broadcast.is_sent %>
+                                                Sent: <%= broadcast.stats['sent'] ?? 0 %>
                                             </span>
                                             <span class="btn btn-danger btn-sm">
-                                                Failed: <%= broadcast.is_failed %>
+                                                Failed: <%= broadcast.stats['failed'] ?? 0 %>
                                             </span>
 
 

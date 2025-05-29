@@ -7,11 +7,11 @@
                     <hr>
                    
                     <!-- <button type="button" class="btn-label btn btn-primary"> Primary</button> -->
-                    <button class="btn btn-sm btn-primary">Total ( 100 )</button>
-                    <button class="btn btn-sm btn-dark">Pending ( 100 )</button>
-                    <button class="btn btn-sm btn-warning">Waiting ( 12 )</button>
-                    <button class="btn btn-sm btn-success">Terkirim ( 32 )</button>
-                    <button class="btn btn-sm btn-danger">Gagal ( 21 )</button>
+                    <button class="btn btn-sm btn-primary">Total (  <%= statsQueue.total ?? 0 %> )</button>
+                    <button class="btn btn-sm btn-dark">Pending ( <%= statsQueue.pending ?? 0  %> )</button>
+                    <button class="btn btn-sm btn-warning">Waiting ( <%= statsQueue.waiting ?? 0  %> )</button>
+                    <button class="btn btn-sm btn-success">Terkirim ( <%= statsQueue.sent ?? 0  %> )</button>
+                    <button class="btn btn-sm btn-danger">Gagal ( <%= statsQueue.failed ?? 0  %> )</button>
                 </div>
             </div>
         </div>

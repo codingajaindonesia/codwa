@@ -39,17 +39,17 @@ async function createClient(clientId) {
         console.log(`✅ ${clientId} ready: ${info.pushname}`);
     });
     client.on('message', async  message => {
-        console.log({
-            clientId,
-            body: message.body,
-            from: message.from,
-            to: message.to,
-            author: message.author,
-            deviceTYpe: message.deviceType,
-            type: message.type,
-            hasMedia: message.hasMedia,
-            timestamp: message.timestamp
-        });
+        // console.log({
+        //     clientId,
+        //     body: message.body,
+        //     from: message.from,
+        //     to: message.to,
+        //     author: message.author,
+        //     deviceTYpe: message.deviceType,
+        //     type: message.type,
+        //     hasMedia: message.hasMedia,
+        //     timestamp: message.timestamp
+        // });
 
         	// console.log(message);
   const extractedMessage = {
@@ -69,9 +69,9 @@ async function createClient(clientId) {
         try {
         // Download media and add it to the extracted message
         const mediaFile = await message.downloadMedia();
-        console.log('Media downloaded:', mediaFile);
+        // console.log('Media downloaded:', mediaFile);
         extractedMessage.mediaFile = saveMediaToDownload(mediaFile, `${message.from}_${message.timestamp}`);
-        console.log(extractedMessage.mediaFile);
+        // console.log(extractedMessage.mediaFile);
         } catch (error) {
         console.error('Error downloading media:', error);
         }
@@ -82,7 +82,7 @@ async function createClient(clientId) {
      
     });
     client.initialize();
-    console.log(`Client ${clientId} initialized`);
+    // console.log(`Client ${clientId} initialized`);
 }
 
 // Contoh fungsi tambah client
@@ -101,7 +101,7 @@ async function logoutClient(clientId) {
 }
 
 async function initClientsFromDB() {
-    console.log('Initializing clients from DB...');
+    // console.log('Initializing clients from DB...');
     const [rows] = await pool.query('SELECT client_id FROM clients');
     rows.forEach(row => createClient(row.client_id));
 }

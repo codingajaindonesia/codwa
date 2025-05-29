@@ -6,7 +6,7 @@ exports.storeUser = async () => {
     try {
         const hashedPassword = await bcrypt.hash('asd', 10);
         await pool.query('INSERT INTO users (username, password) VALUES (?, ?)', ['admin', hashedPassword]);
-        console.log('Users seeded successfully');
+        // console.log('Users seeded successfully');
     }
     catch (error) {
         console.error('Error seeding users:', error);

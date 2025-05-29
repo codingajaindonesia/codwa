@@ -204,7 +204,7 @@
                 const title = formData.get('title');
                 const description = formData.get('description');
                 const clientId = formData.get('clientId');
-                console.log(uuid, title, description, clientId);
+                // console.log(uuid, title, description, clientId);
                 fetch(`/contact/`+uuid, {
                     method: 'PUT',
                     headers: {
@@ -259,7 +259,7 @@
                     })
                     .then(response => response.json())
                     .then(data => {
-                        console.log(data);
+                        // console.log(data);
                         if (data.status) {
                             Swal.fire(
                                 'Deleted!',
